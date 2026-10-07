@@ -28,5 +28,12 @@ payload = f'{body}\n<script type="text/plain" id="tanach-data">\n{data}\n</scrip
     '<meta name="description" content="Search all of Tanach by gematria or exact text, with Atbash, Albam, milui and more.">\n'
     '<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f4f8">\n'
     '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e121a">\n'
+    '<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">\n'
+    '<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">\n'
+    '<link rel="apple-touch-icon" href="icons/icon-180.png">\n'
+    '<link rel="manifest" href="manifest.webmanifest">\n'
+    '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+    '<meta name="apple-mobile-web-app-title" content="Gematria">\n'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black">\n'
     f'{head}\n</head>\n<body>\n{payload}</body>\n</html>\n', encoding='utf-8')
 print('built', len((root / "index.html").read_bytes()), 'bytes')
