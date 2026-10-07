@@ -65,9 +65,19 @@
   ];
   const SECTIONS = [['Torah', 'תורה', 0, 5], ['Nevi’im', 'נביאים', 5, 26], ['Ketuvim', 'כתובים', 26, 39]];
 
-  // Israeli (SI-1452) keyboard layout, so English keys type Hebrew letters.
-  const LATIN = { e: 'ק', r: 'ר', t: 'א', y: 'ט', u: 'ו', i: 'ן', o: 'ם', p: 'פ', a: 'ש', s: 'ד', d: 'ג', f: 'כ', g: 'ע',
-    h: 'י', j: 'ח', k: 'ל', l: 'ך', ';': 'ף', z: 'ז', x: 'ס', c: 'ב', v: 'ה', b: 'נ', n: 'מ', m: 'צ', ',': 'ת', '.': 'ץ' };
+  // English keys typed with an English OS layout can be turned into Hebrew. Letters that already arrive
+  // as Hebrew (a native Hebrew OS layout) are never touched.
+  const LAYOUTS = {
+    // Israeli standard (SI-1452): the letters printed on Israeli keyboards.
+    il: { e: 'ק', r: 'ר', t: 'א', y: 'ט', u: 'ו', i: 'ן', o: 'ם', p: 'פ', a: 'ש', s: 'ד', d: 'ג', f: 'כ', g: 'ע',
+      h: 'י', j: 'ח', k: 'ל', l: 'ך', ';': 'ף', z: 'ז', x: 'ס', c: 'ב', v: 'ה', b: 'נ', n: 'מ', m: 'צ', ',': 'ת', '.': 'ץ' },
+    // Phonetic (QWERTY): letters by sound; Shift gives the final forms.
+    ph: { a: 'א', b: 'ב', g: 'ג', d: 'ד', h: 'ה', v: 'ו', u: 'ו', o: 'ו', z: 'ז', j: 'ח', x: 'ח', t: 'ט', y: 'י', i: 'י',
+      k: 'כ', c: 'כ', l: 'ל', m: 'מ', n: 'נ', s: 'ס', e: 'ע', p: 'פ', f: 'פ', w: 'ש', q: 'ק', r: 'ר',
+      K: 'ך', C: 'ך', M: 'ם', N: 'ן', P: 'ף', F: 'ף', X: 'ץ', T: 'ת' }
+  };
+  const LAYOUT_CHARS = { il: /[a-z;,.]/gi, ph: /[a-z]/gi };
+  let keymap = 'il';
 
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => n.toLocaleString('en-US');
@@ -494,12 +504,20 @@
 
     const q = $('q');
     q.addEventListener('input', () => {
-      if (!/\d/.test(q.value) && /[a-z;,.]/i.test(q.value)) {
+      const map = LAYOUTS[keymap], re = LAYOUT_CHARS[keymap];
+      if (map && !/\d/.test(q.value) && re.test(q.value)) {
         const pos = q.selectionStart;
-        q.value = q.value.replace(/[a-z;,.]/gi, (c) => LATIN[c.toLowerCase()] || '');
+        q.value = q.value.replace(re, (c) => map[c] || map[c.toLowerCase()] || '');
         try { q.setSelectionRange(pos, pos); } catch (e) { /* not focused */ }
       }
       updateLive();
+    });
+    const keymapSel = $('keymap');
+    try { const k = localStorage.getItem('tgs-keymap'); if (k in LAYOUTS || k === 'off') keymap = k; } catch (err) { /* storage unavailable */ }
+    keymapSel.value = keymap;
+    keymapSel.addEventListener('change', () => {
+      keymap = keymapSel.value;
+      try { localStorage.setItem('tgs-keymap', keymap); } catch (err) { /* storage unavailable */ }
     });
     q.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('go').disabled) runSearch(); });
     $('go').addEventListener('click', runSearch);

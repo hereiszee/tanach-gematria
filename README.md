@@ -9,7 +9,7 @@ This is a rebuild of the Tanach & Gematria Search Tool by David Komer at thetrug
 - **Corrected verse numbers.** The old data merged Tehillim 108:1–2 (both labeled 108:3), was off by one or two verses in Shemot 20, Devarim 5 and Yehoshua 21, and used Christian numbering in Shmuel I 23–24 and Yirmiyahu 30–31. All verse numbers now follow standard Hebrew Bibles, so the Sefaria links match.
 - **Text tradition option.** Choose the Ashkenazi/Sephardi Sefer Torah (the default, with the standard 304,805 Torah letters) or the Aleppo Codex / Breuer text that the original site used. They differ in 10 words.
 - **Nikud.** Turn on "Show nikud" above the results to read each verse with vowels. Where the written and read forms differ (ketiv/qere), the read form appears in brackets. The choice is remembered.
-- **Extras:** search by number, English keys type Hebrew (Israeli layout), live gematria preview as you type, per-word values, and a Sefaria link for every result.
+- **Extras:** search by number, English keys can type Hebrew (Israeli layout, phonetic, or off; a native Hebrew OS layout always works as is), live gematria preview as you type, per-word values, and a Sefaria link for every result.
 
 ## Options (same as the original)
 
