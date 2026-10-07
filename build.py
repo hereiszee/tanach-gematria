@@ -10,9 +10,10 @@ head = (root / 'src/head.html').read_text(encoding='utf-8')
 body = (root / 'src/body.html').read_text(encoding='utf-8')
 js = (root / 'src/app.js').read_text(encoding='utf-8')
 data = (root / 'data/tanach.txt').read_text(encoding='utf-8')
-assert '<' not in data
+nikud = (root / 'data/nikud.txt').read_text(encoding='utf-8')
+assert '<' not in data and '<' not in nikud
 
-payload = f'{body}\n<script type="text/plain" id="tanach-data">\n{data}\n</script>\n<script>\n{js}</script>\n'
+payload = f'{body}\n<script type="text/plain" id="tanach-data">\n{data}\n</script>\n<script type="text/plain" id="nikud-data">\n{nikud}\n</script>\n<script>\n{js}</script>\n'
 
 (root / 'artifact.html').write_text(f'{head}\n{payload}', encoding='utf-8')
 (root / 'index.html').write_text(

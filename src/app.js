@@ -161,6 +161,28 @@
     bookRange[b][1] = verses.length;
   }
 
+  /* ---------- Nikud (parsed the first time it is shown) ----------
+     Same line order as the plain text. Tokens are separated by spaces; a token ending in a maqaf joins
+     the next word, and "ketiv|qere" carries the read form (spaces inside it written as "_"). */
+  let nikud = null, nikudAlt = null;
+  function loadNikud() {
+    if (nikud) return;
+    nikud = new Array(verses.length); nikudAlt = new Map();
+    let vi = 0, refs = null;
+    for (const line of $('nikud-data').textContent.split('\n')) {
+      if (!line) continue;
+      const sp = line.indexOf(' ');
+      if (line[0] === '@') refs = new Map();
+      else if (line[0] === '!') nikudAlt.set(refs.get(line.slice(1, sp)), line.slice(sp + 1));
+      else { refs.set(line.slice(0, sp), vi); nikud[vi++] = line.slice(sp + 1); }
+    }
+    if (vi !== verses.length) throw new Error('nikud text does not line up with the verses');
+  }
+  function nikudWord(t) {
+    const bar = t.indexOf('|');
+    return bar < 0 ? t : t.slice(0, bar) + `<span class="qere">[${t.slice(bar + 1).replace(/_/g, ' ')}]</span>`;
+  }
+
   /* ---------- Options UI ---------- */
   function optionPanel(p) {
     const r = (name, val, label, checked) =>
@@ -328,6 +350,7 @@
   }
 
   let perPage = 100;
+  let showNikud = false;
   function render() {
     const st = state;
     if (!st) return;
@@ -347,6 +370,9 @@
     const scope = st.books.every(Boolean) ? 'all of Tanach' : `${st.books.filter(Boolean).length} selected books`;
     const desc = [describeOpts(st.inO) && 'input: ' + describeOpts(st.inO), describeOpts(st.tnO) && 'Tanach: ' + describeOpts(st.tnO)].filter(Boolean).join(' · ');
     const anySub = !isPlain(st.inO) || !isPlain(st.tnO);
+    const nikudBlocked = showNums || (showSub && !isPlain(st.tnO));
+    const useNikud = showNikud && !nikudBlocked;
+    if (useNikud) loadNikud();
 
     let html = `<div class="rhead">
       <div class="summary">
@@ -354,6 +380,7 @@
         <div class="meta">${fmt(total)} ${total === 1 ? 'match' : 'matches'} in ${scope}${total ? ` · showing ${fmt(from + 1)}–${fmt(to)}` : ''} · ${st.ms < 1000 ? Math.max(1, Math.round(st.ms)) + ' ms' : (st.ms / 1000).toFixed(1) + ' s'}${desc ? ' · ' + desc : ''}</div>
       </div>
       <div class="display">
+        <label class="check"${nikudBlocked ? ' title="Turn off the other display options to see nikud"' : ''}><input type="checkbox" id="dispNik"${showNikud ? ' checked' : ''}${nikudBlocked ? ' disabled' : ''}> Show nikud</label>
         <label class="check"><input type="checkbox" id="dispNums"${showNums ? ' checked' : ''}> Show each word's value</label>
         ${anySub ? `<label class="check"><input type="checkbox" id="dispSub"${showSub ? ' checked' : ''}> Show substituted letters</label>` : ''}
       </div>
@@ -379,11 +406,22 @@
         const vs = verses[st.hv[i]], a = st.hs[i], e = st.he[i];
         const w = (st.trad === 'ash' && vs.alt) ? vs.alt : vs.w;
         let text = '';
-        for (let k = 0; k < w.length; k++) {
-          if (k) text += sep;
-          if (k === a) text += '<mark>';
-          text += wordOut(w[k]);
-          if (k === e) text += '</mark>';
+        if (useNikud) {
+          const toks = ((st.trad === 'ash' && vs.alt) ? nikudAlt.get(st.hv[i]) : nikud[st.hv[i]]).split(' ');
+          for (let k = 0; k < toks.length; k++) {
+            if (k && !toks[k - 1].endsWith('־')) text += ' ';
+            if (k === a) text += '<mark>';
+            text += nikudWord(toks[k]);
+            if (k === e) text += '</mark>';
+          }
+          text += '׃';
+        } else {
+          for (let k = 0; k < w.length; k++) {
+            if (k) text += sep;
+            if (k === a) text += '<mark>';
+            text += wordOut(w[k]);
+            if (k === e) text += '</mark>';
+          }
         }
         const bk = BOOKS[vs.b];
         html += `<article class="hit"><div class="ref"><span class="bk" lang="he">${bk[0]}</span><span class="cv">${bk[1]} ${vs.c}:${vs.v}</span>
@@ -482,6 +520,7 @@
       try { localStorage.setItem('tgs-kbd', kb.hidden ? '0' : '1'); } catch (err) { /* storage unavailable */ }
     });
     try { if (localStorage.getItem('tgs-kbd') === '0') $('kbdToggle').click(); } catch (err) { /* storage unavailable */ }
+    try { showNikud = localStorage.getItem('tgs-nikud') === '1'; } catch (err) { /* storage unavailable */ }
 
     $('selAll').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = true; }); $('scope-sel').checked = true; onOptions(); });
     $('selNone').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = false; }); $('scope-sel').checked = true; onOptions(); });
@@ -510,6 +549,11 @@
     $('results').addEventListener('change', (e) => {
       if (e.target.id === 'per') { perPage = +e.target.value; if (state) state.page = 1; render(); }
       else if (e.target.id === 'dispNums' || e.target.id === 'dispSub') render();
+      else if (e.target.id === 'dispNik') {
+        showNikud = e.target.checked;
+        try { localStorage.setItem('tgs-nikud', showNikud ? '1' : '0'); } catch (err) { /* storage unavailable */ }
+        render();
+      }
     });
 
     $('status').textContent = 'Preparing the Tanach text…';
@@ -531,5 +575,5 @@
   else init();
 
   // Exposed for testing.
-  window.__gematria = { parseQuery, substitute, gematria, keyOf, findMatches, readOpts, verses, words, wordText, bookRange, MILUI };
+  window.__gematria = { loadNikud, parseQuery, substitute, gematria, keyOf, findMatches, readOpts, verses, words, wordText, bookRange, MILUI };
 })();
