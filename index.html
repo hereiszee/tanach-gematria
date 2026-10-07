@@ -77,7 +77,6 @@ button { cursor: pointer; }
 .seg input:focus-visible + label { outline: 2px solid var(--accent); }
 .linkbtn { background: none; border: 0; padding: 4px 0; color: var(--accent); font-size: .9rem; font-weight: 500; }
 .hint { font-size: .82rem; color: var(--muted); }
-.hint select { font-size: .82rem; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 2px 4px; }
 
 /* Hebrew keyboard */
 .kbd { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; direction: rtl; }
@@ -200,13 +199,6 @@ footer a { color: var(--accent); }
         <input type="radio" name="mode" id="mode-t" value="t"><label for="mode-t">Exact text</label>
       </div>
       <button class="linkbtn" id="kbdToggle" type="button" aria-expanded="true" aria-controls="kbd">Hide Hebrew keyboard</button>
-      <label class="hint desk-only" for="keymap">English keys type Hebrew:
-        <select id="keymap" title="Only affects letters typed with an English keyboard layout. A Hebrew OS layout always works as is.">
-          <option value="il">Israeli layout</option>
-          <option value="ph">Phonetic (A=א, B=ב, W=ש)</option>
-          <option value="off">Off</option>
-        </select>
-      </label>
       <span class="hint">In Gematria mode you can also type a number.</span>
     </div>
     <div class="kbd" id="kbd"></div>
@@ -46838,19 +46830,6 @@ footer a { color: var(--accent); }
   ];
   const SECTIONS = [['Torah', 'תורה', 0, 5], ['Nevi’im', 'נביאים', 5, 26], ['Ketuvim', 'כתובים', 26, 39]];
 
-  // English keys typed with an English OS layout can be turned into Hebrew. Letters that already arrive
-  // as Hebrew (a native Hebrew OS layout) are never touched.
-  const LAYOUTS = {
-    // Israeli standard (SI-1452): the letters printed on Israeli keyboards.
-    il: { e: 'ק', r: 'ר', t: 'א', y: 'ט', u: 'ו', i: 'ן', o: 'ם', p: 'פ', a: 'ש', s: 'ד', d: 'ג', f: 'כ', g: 'ע',
-      h: 'י', j: 'ח', k: 'ל', l: 'ך', ';': 'ף', z: 'ז', x: 'ס', c: 'ב', v: 'ה', b: 'נ', n: 'מ', m: 'צ', ',': 'ת', '.': 'ץ' },
-    // Phonetic (QWERTY): letters by sound; Shift gives the final forms.
-    ph: { a: 'א', b: 'ב', g: 'ג', d: 'ד', h: 'ה', v: 'ו', u: 'ו', o: 'ו', z: 'ז', j: 'ח', x: 'ח', t: 'ט', y: 'י', i: 'י',
-      k: 'כ', c: 'כ', l: 'ל', m: 'מ', n: 'נ', s: 'ס', e: 'ע', p: 'פ', f: 'פ', w: 'ש', q: 'ק', r: 'ר',
-      K: 'ך', C: 'ך', M: 'ם', N: 'ן', P: 'ף', F: 'ף', X: 'ץ', T: 'ת' }
-  };
-  const LAYOUT_CHARS = { il: /[a-z;,.]/gi, ph: /[a-z]/gi };
-  let keymap = 'il';
 
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => n.toLocaleString('en-US');
@@ -47224,7 +47203,10 @@ footer a { color: var(--accent); }
     const live = $('live');
     if (mode === 'g' && /^\s*\d+\s*$/.test(raw)) { live.innerHTML = `Searching for phrases worth <span class="val">${fmt(parseInt(raw, 10))}</span>`; return; }
     const idx = parseQuery(raw);
-    if (!idx.length) { live.textContent = ''; return; }
+    if (!idx.length) {
+      live.textContent = /[a-z]/i.test(raw) ? 'Only Hebrew letters count. Switch your keyboard to Hebrew, or use the keyboard below.' : '';
+      return;
+    }
     const o = readOpts('in');
     const sub = substitute(idx, o);
     let html = `Value <span class="val">${fmt(gematria(sub, o))}</span>`;
@@ -47276,22 +47258,7 @@ footer a { color: var(--accent); }
     buildKeyboard();
 
     const q = $('q');
-    q.addEventListener('input', () => {
-      const map = LAYOUTS[keymap], re = LAYOUT_CHARS[keymap];
-      if (map && !/\d/.test(q.value) && re.test(q.value)) {
-        const pos = q.selectionStart;
-        q.value = q.value.replace(re, (c) => map[c] || map[c.toLowerCase()] || '');
-        try { q.setSelectionRange(pos, pos); } catch (e) { /* not focused */ }
-      }
-      updateLive();
-    });
-    const keymapSel = $('keymap');
-    try { const k = localStorage.getItem('tgs-keymap'); if (k in LAYOUTS || k === 'off') keymap = k; } catch (err) { /* storage unavailable */ }
-    keymapSel.value = keymap;
-    keymapSel.addEventListener('change', () => {
-      keymap = keymapSel.value;
-      try { localStorage.setItem('tgs-keymap', keymap); } catch (err) { /* storage unavailable */ }
-    });
+    q.addEventListener('input', updateLive);
     q.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !$('go').disabled) runSearch(); });
     $('go').addEventListener('click', runSearch);
 
