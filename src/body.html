@@ -1,0 +1,70 @@
+<div class="wrap">
+  <header class="masthead">
+    <h1>Tanach Gematria Search<span>Find every phrase in Tanach that shares your word's gematria, or every place a phrase appears.</span></h1>
+    <div class="he-title" lang="he">חיפוש גימטריה בתנ״ך</div>
+  </header>
+
+  <section class="console" aria-label="Search">
+    <div class="qrow">
+      <div class="qbox">
+        <input id="q" type="text" lang="he" dir="rtl" autocomplete="off" spellcheck="false" placeholder="הקלד מילה או פסוק" aria-label="Hebrew word, phrase, or number">
+      </div>
+      <button id="go" type="button" disabled>Search</button>
+    </div>
+    <div class="live" id="live" aria-live="polite"></div>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="Search type">
+        <input type="radio" name="mode" id="mode-g" value="g" checked><label for="mode-g">Gematria</label>
+        <input type="radio" name="mode" id="mode-t" value="t"><label for="mode-t">Exact text</label>
+      </div>
+      <button class="linkbtn" id="kbdToggle" type="button" aria-expanded="true" aria-controls="kbd">Hide Hebrew keyboard</button>
+      <span class="hint">English keys type Hebrew (Israeli layout). In Gematria mode you can also type a number.</span>
+    </div>
+    <div class="kbd" id="kbd"></div>
+  </section>
+
+  <details class="opts" id="opts">
+    <summary>Advanced options <span class="state" id="optState"></span></summary>
+    <div class="optbody">
+      <div class="group">
+        <h3>Text tradition</h3>
+        <p class="note">The two traditions differ in 10 words, 9 of them in the Torah (for example <bdi lang="he">ויהי</bdi> or <bdi lang="he">ויהיו</bdi> in Bereishit 9:29). The Ashkenazi/Sephardi text has the standard 304,805 Torah letters.</p>
+        <div class="radios">
+          <label><input type="radio" name="trad" id="trad-ash" value="ash" checked> Ashkenazi / Sephardi Sefer Torah</label>
+          <label><input type="radio" name="trad" id="trad-alp" value="alp"> Aleppo Codex / Breuer (the original site's text)</label>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Where to search</h3>
+        <div class="radios" style="margin-bottom:12px">
+          <label><input type="radio" name="scope" id="scope-all" value="all" checked> All of Tanach</label>
+          <label><input type="radio" name="scope" id="scope-sel" value="sel"> Selected books only</label>
+          <button class="linkbtn" id="selAll" type="button">Select all</button>
+          <button class="linkbtn" id="selNone" type="button">Clear all</button>
+        </div>
+        <div class="books disabled" id="books"></div>
+      </div>
+
+      <div class="cols">
+        <div class="group" id="optInput">
+          <h3>Your input</h3>
+          <p class="note">Changes how your search term is counted.</p>
+        </div>
+        <div class="group" id="optTanach">
+          <h3>Tanach text</h3>
+          <p class="note">Changes how each word of Tanach is counted.</p>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <section class="results" id="results" aria-live="polite">
+    <div class="status" id="status">Preparing the Tanach text…</div>
+  </section>
+
+  <footer>
+    <div>Gematria search adds up consecutive words inside a single verse and lists every run whose total equals your value. Exact text search finds whole-word matches of your phrase.</div>
+    <div>Text: the Aleppo Codex tradition as edited by Mordechai Breuer, cross-checked word by word against <a href="https://www.sefaria.org/texts/Tanakh" target="_blank" rel="noopener">Miqra according to the Masorah</a> (CC BY-SA) and the <a href="https://tanach.us" target="_blank" rel="noopener">Leningrad Codex (UXLC)</a>. Written text (ketiv) is used throughout. Verse numbers follow standard Hebrew Bibles. Rebuilt from the Tanach &amp; Gematria Search Tool by David Komer at thetrugmans.com.</div>
+  </footer>
+</div>
