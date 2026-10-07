@@ -348,6 +348,7 @@
 
   let perPage = 100;
   let showNikud = false;
+  let verseFont = '';
   function render() {
     const st = state;
     if (!st) return;
@@ -367,7 +368,7 @@
     const scope = st.books.every(Boolean) ? 'all of Tanach' : `${st.books.filter(Boolean).length} selected books`;
     const desc = [describeOpts(st.inO) && 'input: ' + describeOpts(st.inO), describeOpts(st.tnO) && 'Tanach: ' + describeOpts(st.tnO)].filter(Boolean).join(' · ');
     const anySub = !isPlain(st.inO) || !isPlain(st.tnO);
-    const nikudBlocked = showNums || (showSub && !isPlain(st.tnO));
+    const nikudBlocked = showSub && !isPlain(st.tnO);
     const useNikud = showNikud && !nikudBlocked;
     if (useNikud) loadNikud();
 
@@ -380,6 +381,7 @@
         <label class="check"${nikudBlocked ? ' title="Turn off the other display options to see nikud"' : ''}><input type="checkbox" id="dispNik"${showNikud ? ' checked' : ''}${nikudBlocked ? ' disabled' : ''}> Show nikud</label>
         <label class="check"><input type="checkbox" id="dispNums"${showNums ? ' checked' : ''}> Show each word's value</label>
         ${anySub ? `<label class="check"><input type="checkbox" id="dispSub"${showSub ? ' checked' : ''}> Show substituted letters</label>` : ''}
+        <label class="check">Font <select id="verseFont"><option value=""${verseFont === '' ? ' selected' : ''}>Print</option><option value="font-a"${verseFont === 'font-a' ? ' selected' : ''}>Ashurit (Ashkenaz)</option><option value="font-s"${verseFont === 'font-s' ? ' selected' : ''}>Ashurit (Sefarad)</option></select></label>
       </div>
     </div>`;
     html += pagerHTML(total, st.page, last, perPage, true);
@@ -389,15 +391,13 @@
     } else {
       const sep = showSub && st.tnO.milui ? '-' : ' ';
       const cache = new Map();
-      const wordOut = (id) => {
-        let r = cache.get(id);
-        if (r === undefined) {
-          const sub = (showNums || showSub) && !isPlain(st.tnO) ? substitute(words[id], st.tnO) : words[id];
-          r = showNums ? fmt(gematria(sub, st.tnO)) : (showSub ? toText(sub).trim() : wordText[id]);
-          cache.set(id, r);
-        }
-        return r;
+      const valueOf = (id) => {
+        let v = cache.get(id);
+        if (v === undefined) { v = fmt(gematria(isPlain(st.tnO) ? words[id] : substitute(words[id], st.tnO), st.tnO)); cache.set(id, v); }
+        return v;
       };
+      const stack = (text, id) => showNums ? `<span class="w"><span class="t">${text}</span><span class="n">${valueOf(id)}</span></span>` : text;
+      const wordOut = (id) => stack(showSub && !isPlain(st.tnO) ? toText(substitute(words[id], st.tnO)).trim() : wordText[id], id);
       html += '<div class="ledger">';
       for (let i = from; i < to; i++) {
         const vs = verses[st.hv[i]], a = st.hs[i], e = st.he[i];
@@ -408,7 +408,7 @@
           for (let k = 0; k < toks.length; k++) {
             if (k && !toks[k - 1].endsWith('־')) text += ' ';
             if (k === a) text += '<mark>';
-            text += nikudWord(toks[k]);
+            text += stack(nikudWord(toks[k]), w[k]);
             if (k === e) text += '</mark>';
           }
           text += '׃';
@@ -423,11 +423,12 @@
         const bk = BOOKS[vs.b];
         html += `<article class="hit"><div class="ref"><span class="bk" lang="he">${bk[0]}</span><span class="cv">${bk[1]} ${vs.c}:${vs.v}</span>
           <a href="https://www.sefaria.org/${bk[2]}.${vs.c}.${vs.v}?lang=he" target="_blank" rel="noopener">Open in Sefaria ↗</a></div>
-          <div class="verse${showNums ? ' nums' : ''}" lang="he">${text}</div></article>`;
+          <div class="verse${showNums ? ' stacked' : ''}" lang="he">${text}</div></article>`;
       }
       html += '</div>';
       html += pagerHTML(total, st.page, last, perPage, false);
     }
+    $('results').className = 'results ' + verseFont;
     $('results').innerHTML = html;
   }
 
@@ -516,6 +517,7 @@
     try { kbdPref = localStorage.getItem('tgs-kbd'); } catch (err) { /* storage unavailable */ }
     if (kbdPref === '0' || (kbdPref === null && window.matchMedia('(max-width: 640px)').matches)) $('kbdToggle').click();
     try { showNikud = localStorage.getItem('tgs-nikud') === '1'; } catch (err) { /* storage unavailable */ }
+    try { const f = localStorage.getItem('tgs-font'); if (f === 'font-a' || f === 'font-s') verseFont = f; } catch (err) { /* storage unavailable */ }
 
     $('selAll').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = true; }); $('scope-sel').checked = true; onOptions(); });
     $('selNone').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = false; }); $('scope-sel').checked = true; onOptions(); });
@@ -544,6 +546,11 @@
     $('results').addEventListener('change', (e) => {
       if (e.target.id === 'per') { perPage = +e.target.value; if (state) state.page = 1; render(); }
       else if (e.target.id === 'dispNums' || e.target.id === 'dispSub') render();
+      else if (e.target.id === 'verseFont') {
+        verseFont = e.target.value;
+        try { localStorage.setItem('tgs-font', verseFont); } catch (err) { /* storage unavailable */ }
+        render();
+      }
       else if (e.target.id === 'dispNik') {
         showNikud = e.target.checked;
         try { localStorage.setItem('tgs-nikud', showNikud ? '1' : '0'); } catch (err) { /* storage unavailable */ }

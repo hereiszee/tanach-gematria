@@ -9,6 +9,12 @@ root = Path(__file__).parent
 head = (root / 'src/head.html').read_text(encoding='utf-8')
 body = (root / 'src/body.html').read_text(encoding='utf-8')
 js = (root / 'src/app.js').read_text(encoding='utf-8')
+import base64
+def font_face(family, path):
+    b64 = base64.b64encode((root / path).read_bytes()).decode()
+    return f"@font-face {{ font-family: '{family}'; src: url(data:font/woff2;base64,{b64}) format('woff2'); font-display: swap; }}"
+fonts = '\n'.join([font_face('Stam Ashkenaz CLM', 'fonts/StamAshkenazCLM.woff2'), font_face('Stam Sefarad CLM', 'fonts/StamSefaradCLM.woff2')])
+head = head.replace('/*FONTS*/', fonts, 1)
 data = (root / 'data/tanach.txt').read_text(encoding='utf-8')
 nikud = (root / 'data/nikud.txt').read_text(encoding='utf-8')
 assert '<' not in data and '<' not in nikud

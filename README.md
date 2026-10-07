@@ -9,6 +9,7 @@ This is a rebuild of the Tanach & Gematria Search Tool by David Komer at thetrug
 - **Corrected verse numbers.** The old data merged Tehillim 108:1–2 (both labeled 108:3), was off by one or two verses in Shemot 20, Devarim 5 and Yehoshua 21, and used Christian numbering in Shmuel I 23–24 and Yirmiyahu 30–31. All verse numbers now follow standard Hebrew Bibles, so the Sefaria links match.
 - **Text tradition option.** Choose the Ashkenazi/Sephardi Sefer Torah (the default, with the standard 304,805 Torah letters) or the Aleppo Codex / Breuer text that the original site used. They differ in 10 words.
 - **Nikud.** Turn on "Show nikud" above the results to read each verse with vowels. Where the written and read forms differ (ketiv/qere), the read form appears in brackets. The choice is remembered.
+- **Word values and Ashurit.** "Show each word's value" puts every word's gematria beneath it (works together with nikud). The Font menu switches the verses to ketav Ashurit in the Ashkenazi or Sephardi style.
 - **Extras:** search by number, live gematria preview as you type, per-word values, and a Sefaria link for every result.
 
 ## Options (same as the original)
@@ -29,6 +30,7 @@ Input and Tanach substitutions are set separately, as on the original site.
 - `src/` has the page markup, styles and script.
 - `data/nikud.txt` has the same verses with nikud, aligned word for word (a token ending in a maqaf joins the next word; `ketiv|qere` marks read forms).
 - `data/tanach.txt` has the text: one verse per line as `chapter:verse words…`, books introduced by `@index`, and Ashkenazi/Sephardi variants as `!chapter:verse words…`.
+- `fonts/` has the Culmus STaM fonts (Stam Ashkenaz CLM, Stam Sefarad CLM by Yoram Gnat, GPL 2 with font-embedding exception; see `fonts/LICENSE-culmus.txt`). The build embeds them in the page.
 - `build.py` assembles `index.html` (and `artifact.html`) from `src/` and `data/`.
 
 ## Text sources
