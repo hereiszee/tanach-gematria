@@ -517,9 +517,11 @@
       const kb = $('kbd'); kb.hidden = !kb.hidden;
       e.currentTarget.setAttribute('aria-expanded', String(!kb.hidden));
       e.currentTarget.textContent = kb.hidden ? 'Show Hebrew keyboard' : 'Hide Hebrew keyboard';
-      try { localStorage.setItem('tgs-kbd', kb.hidden ? '0' : '1'); } catch (err) { /* storage unavailable */ }
+      if (e.isTrusted) { try { localStorage.setItem('tgs-kbd', kb.hidden ? '0' : '1'); } catch (err) { /* storage unavailable */ } }
     });
-    try { if (localStorage.getItem('tgs-kbd') === '0') $('kbdToggle').click(); } catch (err) { /* storage unavailable */ }
+    let kbdPref = null;
+    try { kbdPref = localStorage.getItem('tgs-kbd'); } catch (err) { /* storage unavailable */ }
+    if (kbdPref === '0' || (kbdPref === null && window.matchMedia('(max-width: 640px)').matches)) $('kbdToggle').click();
     try { showNikud = localStorage.getItem('tgs-nikud') === '1'; } catch (err) { /* storage unavailable */ }
 
     $('selAll').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = true; }); $('scope-sel').checked = true; onOptions(); });
@@ -535,7 +537,7 @@
     });
 
     // Any setting that changes the search re-runs it; display toggles only re-render.
-    function onOptions() { updateOptState(); updateLive(); if (state) runSearch(); }
+    function onOptions() { updateOptState(); updateLive(); if (state || $('q').value.trim()) runSearch(); }
     document.querySelector('.optbody').addEventListener('change', onOptions);
     document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', onOptions));
 
@@ -555,6 +557,11 @@
         render();
       }
     });
+
+    const toTop = $('toTop'), consoleEl = document.querySelector('.console');
+    const onScroll = () => { toTop.hidden = consoleEl.getBoundingClientRect().bottom > 0; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    toTop.addEventListener('click', () => { window.scrollTo(0, 0); q.focus({ preventScroll: true }); q.select(); });
 
     $('status').textContent = 'Preparing the Tanach text…';
     setTimeout(() => {

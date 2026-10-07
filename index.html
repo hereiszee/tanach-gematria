@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Search all of Tanach by gematria or exact text, with Atbash, Albam, milui and more.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f4f8">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e121a">
 <title>Tanach Gematria Search</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,6 +44,7 @@
   --mark-bg: #5a4510; --mark-ink: #ffe3a0; --danger: #ff8a80; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--paper); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; margin: 0; }
 .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 20px; }
 button, input, select { font: inherit; color: inherit; }
@@ -59,6 +62,7 @@ button { cursor: pointer; }
 .qrow { display: flex; gap: 10px; flex-wrap: wrap; }
 .qbox { flex: 1 1 320px; min-width: 0; position: relative; }
 #q { width: 100%; direction: rtl; font-family: var(--font-verse); font-size: 1.75rem; line-height: 1.2; padding: 12px 16px; border: 1.5px solid var(--line); border-radius: var(--r); background: var(--paper); }
+#q::-webkit-search-decoration, #q::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 #q:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 #go { flex: 0 0 auto; padding: 0 26px; min-height: 56px; border: 0; border-radius: var(--r); background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 1rem; }
 #go:disabled { opacity: .55; cursor: progress; }
@@ -140,13 +144,35 @@ input[type=radio], input[type=checkbox] { accent-color: var(--accent); margin: 0
 .empty { padding: 28px 18px; text-align: center; color: var(--muted); }
 .status { color: var(--muted); font-size: .9rem; }
 .status.err { color: var(--danger); }
+.totop { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 5; border: 0; border-radius: 999px; padding: 12px 18px; background: var(--accent); color: var(--on-accent); font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
 footer { color: var(--muted); font-size: .82rem; max-width: 80ch; display: grid; gap: 6px; }
 footer a { color: var(--accent); }
 @media (max-width: 640px) {
-  .hit { grid-template-columns: 1fr; }
-  .ref { grid-auto-flow: column; justify-content: start; gap: 10px; align-items: baseline; }
-  .field { grid-template-columns: 1fr; gap: 4px; }
+  .wrap { padding-block: 18px 96px; gap: 14px; }
+  .masthead h1 span { font-size: .55em; }
+  .masthead .he-title { font-size: 1.3rem; }
+  .console { padding: 14px; }
+  #q { font-size: 1.5rem; padding: 10px 14px; }
   #go { flex: 1 1 100%; min-height: 48px; }
+  .desk-only { display: none; }
+  .kbd { grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .kbd button { padding: 5px 0 3px; }
+  .kbd b { font-size: 1.2rem; }
+  .kbd .wide { grid-column: span 4; }
+  .hit { grid-template-columns: 1fr; gap: 4px; padding: 12px 14px; }
+  .ref { grid-auto-flow: column; justify-content: start; gap: 10px; align-items: baseline; }
+  .verse { font-size: 1.25rem; line-height: 1.8; }
+  .field { grid-template-columns: 1fr; gap: 4px; }
+  .radios { gap: 2px 14px; }
+  .radios label, .check, .booklist label { min-height: 36px; }
+  .pager button { min-height: 40px; padding: 6px 12px; }
+  .pager select { min-height: 40px; }
+  .books { grid-template-columns: 1fr; gap: 10px; }
+  .booklist { grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .booklist .he { display: none; }
+  details.opts > summary { padding: 12px 14px; }
+  .optbody { padding: 0 14px 16px; gap: 18px; }
+  .milui { grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -162,7 +188,7 @@ footer a { color: var(--accent); }
   <section class="console" aria-label="Search">
     <div class="qrow">
       <div class="qbox">
-        <input id="q" type="text" lang="he" dir="rtl" autocomplete="off" spellcheck="false" placeholder="הקלד מילה או פסוק" aria-label="Hebrew word, phrase, or number">
+        <input id="q" type="search" enterkeyhint="search" lang="he" dir="rtl" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="הקלד מילה או פסוק" aria-label="Hebrew word, phrase, or number">
       </div>
       <button id="go" type="button" disabled>Search</button>
     </div>
@@ -173,7 +199,7 @@ footer a { color: var(--accent); }
         <input type="radio" name="mode" id="mode-t" value="t"><label for="mode-t">Exact text</label>
       </div>
       <button class="linkbtn" id="kbdToggle" type="button" aria-expanded="true" aria-controls="kbd">Hide Hebrew keyboard</button>
-      <span class="hint">English keys type Hebrew (Israeli layout). In Gematria mode you can also type a number.</span>
+      <span class="hint"><span class="desk-only">English keys type Hebrew (Israeli layout). </span>In Gematria mode you can also type a number.</span>
     </div>
     <div class="kbd" id="kbd"></div>
   </section>
@@ -217,6 +243,8 @@ footer a { color: var(--accent); }
   <section class="results" id="results" aria-live="polite">
     <div class="status" id="status">Preparing the Tanach text…</div>
   </section>
+
+  <button type="button" id="toTop" class="totop" hidden aria-label="Back to search">↑ Search</button>
 
   <footer>
     <div>Gematria search adds up consecutive words inside a single verse and lists every run whose total equals your value. Exact text search finds whole-word matches of your phrase.</div>
@@ -47254,9 +47282,11 @@ footer a { color: var(--accent); }
       const kb = $('kbd'); kb.hidden = !kb.hidden;
       e.currentTarget.setAttribute('aria-expanded', String(!kb.hidden));
       e.currentTarget.textContent = kb.hidden ? 'Show Hebrew keyboard' : 'Hide Hebrew keyboard';
-      try { localStorage.setItem('tgs-kbd', kb.hidden ? '0' : '1'); } catch (err) { /* storage unavailable */ }
+      if (e.isTrusted) { try { localStorage.setItem('tgs-kbd', kb.hidden ? '0' : '1'); } catch (err) { /* storage unavailable */ } }
     });
-    try { if (localStorage.getItem('tgs-kbd') === '0') $('kbdToggle').click(); } catch (err) { /* storage unavailable */ }
+    let kbdPref = null;
+    try { kbdPref = localStorage.getItem('tgs-kbd'); } catch (err) { /* storage unavailable */ }
+    if (kbdPref === '0' || (kbdPref === null && window.matchMedia('(max-width: 640px)').matches)) $('kbdToggle').click();
     try { showNikud = localStorage.getItem('tgs-nikud') === '1'; } catch (err) { /* storage unavailable */ }
 
     $('selAll').addEventListener('click', () => { BOOKS.forEach((_, i) => { $('bk-' + i).checked = true; }); $('scope-sel').checked = true; onOptions(); });
@@ -47272,7 +47302,7 @@ footer a { color: var(--accent); }
     });
 
     // Any setting that changes the search re-runs it; display toggles only re-render.
-    function onOptions() { updateOptState(); updateLive(); if (state) runSearch(); }
+    function onOptions() { updateOptState(); updateLive(); if (state || $('q').value.trim()) runSearch(); }
     document.querySelector('.optbody').addEventListener('change', onOptions);
     document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', onOptions));
 
@@ -47292,6 +47322,11 @@ footer a { color: var(--accent); }
         render();
       }
     });
+
+    const toTop = $('toTop'), consoleEl = document.querySelector('.console');
+    const onScroll = () => { toTop.hidden = consoleEl.getBoundingClientRect().bottom > 0; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    toTop.addEventListener('click', () => { window.scrollTo(0, 0); q.focus({ preventScroll: true }); q.select(); });
 
     $('status').textContent = 'Preparing the Tanach text…';
     setTimeout(() => {

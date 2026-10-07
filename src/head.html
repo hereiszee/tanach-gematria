@@ -36,6 +36,7 @@
   --mark-bg: #5a4510; --mark-ink: #ffe3a0; --danger: #ff8a80; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--paper); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; margin: 0; }
 .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 20px; }
 button, input, select { font: inherit; color: inherit; }
@@ -53,6 +54,7 @@ button { cursor: pointer; }
 .qrow { display: flex; gap: 10px; flex-wrap: wrap; }
 .qbox { flex: 1 1 320px; min-width: 0; position: relative; }
 #q { width: 100%; direction: rtl; font-family: var(--font-verse); font-size: 1.75rem; line-height: 1.2; padding: 12px 16px; border: 1.5px solid var(--line); border-radius: var(--r); background: var(--paper); }
+#q::-webkit-search-decoration, #q::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 #q:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 #go { flex: 0 0 auto; padding: 0 26px; min-height: 56px; border: 0; border-radius: var(--r); background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 1rem; }
 #go:disabled { opacity: .55; cursor: progress; }
@@ -134,13 +136,35 @@ input[type=radio], input[type=checkbox] { accent-color: var(--accent); margin: 0
 .empty { padding: 28px 18px; text-align: center; color: var(--muted); }
 .status { color: var(--muted); font-size: .9rem; }
 .status.err { color: var(--danger); }
+.totop { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 5; border: 0; border-radius: 999px; padding: 12px 18px; background: var(--accent); color: var(--on-accent); font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
 footer { color: var(--muted); font-size: .82rem; max-width: 80ch; display: grid; gap: 6px; }
 footer a { color: var(--accent); }
 @media (max-width: 640px) {
-  .hit { grid-template-columns: 1fr; }
-  .ref { grid-auto-flow: column; justify-content: start; gap: 10px; align-items: baseline; }
-  .field { grid-template-columns: 1fr; gap: 4px; }
+  .wrap { padding-block: 18px 96px; gap: 14px; }
+  .masthead h1 span { font-size: .55em; }
+  .masthead .he-title { font-size: 1.3rem; }
+  .console { padding: 14px; }
+  #q { font-size: 1.5rem; padding: 10px 14px; }
   #go { flex: 1 1 100%; min-height: 48px; }
+  .desk-only { display: none; }
+  .kbd { grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .kbd button { padding: 5px 0 3px; }
+  .kbd b { font-size: 1.2rem; }
+  .kbd .wide { grid-column: span 4; }
+  .hit { grid-template-columns: 1fr; gap: 4px; padding: 12px 14px; }
+  .ref { grid-auto-flow: column; justify-content: start; gap: 10px; align-items: baseline; }
+  .verse { font-size: 1.25rem; line-height: 1.8; }
+  .field { grid-template-columns: 1fr; gap: 4px; }
+  .radios { gap: 2px 14px; }
+  .radios label, .check, .booklist label { min-height: 36px; }
+  .pager button { min-height: 40px; padding: 6px 12px; }
+  .pager select { min-height: 40px; }
+  .books { grid-template-columns: 1fr; gap: 10px; }
+  .booklist { grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .booklist .he { display: none; }
+  details.opts > summary { padding: 12px 14px; }
+  .optbody { padding: 0 14px 16px; gap: 18px; }
+  .milui { grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>

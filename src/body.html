@@ -7,7 +7,7 @@
   <section class="console" aria-label="Search">
     <div class="qrow">
       <div class="qbox">
-        <input id="q" type="text" lang="he" dir="rtl" autocomplete="off" spellcheck="false" placeholder="הקלד מילה או פסוק" aria-label="Hebrew word, phrase, or number">
+        <input id="q" type="search" enterkeyhint="search" lang="he" dir="rtl" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="הקלד מילה או פסוק" aria-label="Hebrew word, phrase, or number">
       </div>
       <button id="go" type="button" disabled>Search</button>
     </div>
@@ -18,7 +18,7 @@
         <input type="radio" name="mode" id="mode-t" value="t"><label for="mode-t">Exact text</label>
       </div>
       <button class="linkbtn" id="kbdToggle" type="button" aria-expanded="true" aria-controls="kbd">Hide Hebrew keyboard</button>
-      <span class="hint">English keys type Hebrew (Israeli layout). In Gematria mode you can also type a number.</span>
+      <span class="hint"><span class="desk-only">English keys type Hebrew (Israeli layout). </span>In Gematria mode you can also type a number.</span>
     </div>
     <div class="kbd" id="kbd"></div>
   </section>
@@ -62,6 +62,8 @@
   <section class="results" id="results" aria-live="polite">
     <div class="status" id="status">Preparing the Tanach text…</div>
   </section>
+
+  <button type="button" id="toTop" class="totop" hidden aria-label="Back to search">↑ Search</button>
 
   <footer>
     <div>Gematria search adds up consecutive words inside a single verse and lists every run whose total equals your value. Exact text search finds whole-word matches of your phrase.</div>
