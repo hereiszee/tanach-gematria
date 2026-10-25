@@ -30,7 +30,7 @@ Input and Tanach substitutions are set separately, as on the original site.
 - `index.html` is the app (GitHub Pages serves this, together with `data/nikud.txt`, the manifest, the icons and the service worker).
 - `src/` has the page markup, styles, script and the service worker template.
 - `manifest.webmanifest`, `icons/` and `sw.js` make the page installable and give it a favicon, home-screen icons and offline support.
-- `tests/` has the data invariants (`python3 -I tests/check_data.py`) and search-engine tests (`node --test tests/`); the GitHub Actions workflow runs both and checks that the committed build is current.
+- `tests/` has the data invariants (`python3 -I tests/check_data.py`) and search-engine tests (`node --test "tests/*.test.mjs"`); the GitHub Actions workflow runs both and checks that the committed build is current.
 - `data/nikud.txt` has the same verses with nikud, aligned word for word (a token ending in a maqaf joins the next word; `ketiv|qere` marks read forms).
 - `data/tanach.txt` has the text: one verse per line as `chapter:verse words…`, books introduced by `@index`, and Ashkenazi/Sephardi variants as `!chapter:verse words…`.
 - `fonts/` has the Culmus STaM fonts (Stam Ashkenaz CLM, Stam Sefarad CLM by Yoram Gnat, GPL 2 with font-embedding exception; see `fonts/LICENSE-culmus.txt`). The build embeds them in the page.

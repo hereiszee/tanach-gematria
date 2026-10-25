@@ -13,7 +13,7 @@ jobs:
       - name: Data invariants
         run: python3 -I tests/check_data.py
       - name: Search engine tests
-        run: node --test tests/
+        run: node --test "tests/*.test.mjs"
       - name: Committed build is current
         run: |
           python3 build.py
