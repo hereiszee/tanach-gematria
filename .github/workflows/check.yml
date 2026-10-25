@@ -1,0 +1,20 @@
+name: Check
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Data invariants
+        run: python3 -I tests/check_data.py
+      - name: Search engine tests
+        run: node --test tests/
+      - name: Committed build is current
+        run: |
+          python3 build.py
+          git diff --exit-code -- index.html sw.js
