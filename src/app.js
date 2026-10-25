@@ -43,7 +43,7 @@
     [[18, 4, 10], [18, 4, 10, 19]],
     [[19, 6, 26]],
     [[20, 10, 21], [20, 21]],
-    [[21, 25], [21, 10, 25]],
+    [[21, 10, 25], [21, 25]],
     [[22, 6], [22, 10, 6], [22, 1, 6]]
   ];
 
@@ -69,13 +69,17 @@
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => n.toLocaleString('en-US');
   const toText = (arr) => { let s = ''; for (const x of arr) s += HEB[x]; return s; };
+  const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // A typed number must stay an exact integer; beyond 2^53 parseInt silently rounds or gives Infinity.
+  const parseTarget = (raw) => { const n = Number(raw.trim()); return Number.isSafeInteger(n) ? n : null; };
+  const TOO_BIG = 'That number is too large to be a gematria value. Try a smaller number.';
 
   /* ---------- Substitutions and counting ---------- */
   function miluiOnce(vals, sel) {
     const out = [];
     for (const v of vals) {
-      if (v === 0) out.push(0);
-      else for (const x of sel[base(v)]) out.push(x);
+      if (v === 0) { out.push(0); continue; }
+      for (const x of sel[base(v)]) out.push(x);
       out.push(0); // a space between spelled-out letters
     }
     return out;
@@ -102,7 +106,10 @@
     return s;
   }
   const isPlain = (o) => o.alpha === 'none' && !o.milui;
-  const keyOf = (arr) => { let s = ''; for (const x of arr) s += String.fromCharCode(64 + x); return s; };
+  // Text-mode key: letters as characters, word boundaries as exactly one '@', none at the ends.
+  // (Milui adds a space after every spelled-out letter, so runs of spaces must collapse or
+  // a multi-word query could never line up with the '@'-joined Tanach words.)
+  const keyOf = (arr) => { let s = ''; for (const x of arr) s += String.fromCharCode(64 + x); return s.replace(/@+/g, '@').replace(/^@|@$/g, ''); };
 
   function parseQuery(str) {
     const out = [];
@@ -133,7 +140,11 @@
         if (id === undefined) {
           id = words.length; ids.set(w, id); wordText.push(w);
           const a = new Uint8Array(w.length);
-          for (let j = 0; j < w.length; j++) a[j] = IDX.get(w[j]);
+          for (let j = 0; j < w.length; j++) {
+            const li = IDX.get(w[j]);
+            if (li === undefined) throw new Error('unexpected character in the text: ' + w);
+            a[j] = li;
+          }
           words.push(a);
         }
         out[i] = id;
@@ -158,26 +169,48 @@
     bookRange[b][1] = verses.length;
   }
 
-  /* ---------- Nikud (parsed the first time it is shown) ----------
+  /* ---------- Nikud (loaded the first time it is shown) ----------
      Same line order as the plain text. Tokens are separated by spaces; a token ending in a maqaf joins
-     the next word, and "ketiv|qere" carries the read form (spaces inside it written as "_"). */
-  let nikud = null, nikudAlt = null;
-  function loadNikud() {
-    if (nikud) return;
-    nikud = new Array(verses.length); nikudAlt = new Map();
+     the next word, and "ketiv|qere" carries the read form (spaces inside it written as "_").
+     The single-file artifact embeds the text in #nikud-data; the site fetches data/nikud.txt on demand
+     so that first load is about half the size. */
+  let nikud = null, nikudAlt = null, nikudLoading = null, nikudError = '';
+  function parseNikud(text) {
+    const n = new Array(verses.length), alt = new Map();
     let vi = 0, refs = null;
-    for (const line of $('nikud-data').textContent.split('\n')) {
+    for (const line of text.split('\n')) {
       if (!line) continue;
       const sp = line.indexOf(' ');
       if (line[0] === '@') refs = new Map();
-      else if (line[0] === '!') nikudAlt.set(refs.get(line.slice(1, sp)), line.slice(sp + 1));
-      else { refs.set(line.slice(0, sp), vi); nikud[vi++] = line.slice(sp + 1); }
+      else if (line[0] === '!') alt.set(refs.get(line.slice(1, sp)), line.slice(sp + 1));
+      else { refs.set(line.slice(0, sp), vi); n[vi++] = line.slice(sp + 1); }
     }
     if (vi !== verses.length) throw new Error('nikud text does not line up with the verses');
+    nikud = n; nikudAlt = alt;
+  }
+  // True when the nikud text is ready. Otherwise starts loading it and re-renders when it arrives.
+  function loadNikud() {
+    if (nikud) return true;
+    const el = $('nikud-data');
+    if (el) { parseNikud(el.textContent); return true; }
+    if (!nikudLoading) {
+      nikudError = '';
+      nikudLoading = fetch('data/nikud.txt')
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(parseNikud)
+        .catch((err) => { nikudError = 'The nikud text could not be loaded (' + err.message + ').'; showNikud = false; })
+        .then(() => { nikudLoading = null; render(); });
+    }
+    return false;
   }
   function nikudWord(t) {
     const bar = t.indexOf('|');
-    return bar < 0 ? t : t.slice(0, bar) + `<span class="qere">[${t.slice(bar + 1).replace(/_/g, ' ')}]</span>`;
+    if (bar < 0) return t;
+    const k = t.slice(0, bar), q = t.slice(bar + 1).replace(/_/g, ' ');
+    // A pointed ketiv half means a word that is read but not written: the bracketed word is an
+    // insertion after it, not a replacement for it.
+    const ins = /[֑-ׇ]/.test(k);
+    return k + `<span class="qere${ins ? ' ins' : ''}" title="${ins ? 'Read but not written' : 'Qere (read form)'}">[${q}]</span>`;
   }
 
   /* ---------- Options UI ---------- */
@@ -186,27 +219,23 @@
       `<label><input type="radio" name="${p}-${name}" id="${p}-${name}-${val}" value="${val}"${checked ? ' checked' : ''}> ${label}</label>`;
     let milui = '';
     for (let i = 1; i <= 22; i++) {
-      milui += `<div><span class="l">${HEB[i]}</span>`;
+      milui += `<div role="group" aria-label="${HEB[i]}"><span class="l" aria-hidden="true">${HEB[i]}</span>`;
       MILUI[i].forEach((opt, j) => {
         milui += `<label><input type="radio" name="${p}-ml-${i}" id="${p}-ml-${i}-${j}" value="${j}"${j ? '' : ' checked'}>${toText(opt)}</label>`;
       });
       milui += '</div>';
     }
+    // Each row is a named group so a screen reader can tell the two 'None' / 'Absolute' sets apart.
+    const field = (name, label, body) => `<div class="field" role="group" aria-labelledby="${p}-${name}-l"><span id="${p}-${name}-l">${label}</span><div class="radios">${body}</div></div>`;
     return `
-      <div class="field"><span>Alphabet</span><div class="radios">
-        ${r('alpha', 'none', 'None', true)}${r('alpha', 'atbash', 'Atbash <span lang="he">את״בש</span>')}${r('alpha', 'albam', 'Albam <span lang="he">אל״בם</span>')}
-      </div></div>
-      <div class="field"><span>Gematria</span><div class="radios">
-        ${r('method', 'abs', 'Absolute', true)}${r('method', 'ord', 'Ordinal')}${r('method', 'red', 'Reduced')}
-        <label class="check"><input type="checkbox" id="${p}-sofit"> Final letters ך–ץ as 500–900</label>
-      </div></div>
-      <div class="field"><span>Milui</span><div class="radios">
-        ${r('milui', '0', 'None', true)}${r('milui', '1', 'Milui')}${r('milui', '2', 'Milui of milui')}
-        <label class="check"><input type="checkbox" id="${p}-mfirst"> Milui before alphabet swap</label>
-      </div></div>
+      ${field('alpha', 'Alphabet', r('alpha', 'none', 'None', true) + r('alpha', 'atbash', 'Atbash <span lang="he">את״בש</span>') + r('alpha', 'albam', 'Albam <span lang="he">אל״בם</span>'))}
+      ${field('method', 'Gematria', r('method', 'abs', 'Absolute', true) + r('method', 'ord', 'Ordinal') + r('method', 'red', 'Reduced')
+        + `<label class="check"><input type="checkbox" id="${p}-sofit"> Final letters ך–ץ as 500–900</label>`)}
+      ${field('milui', 'Milui', r('milui', '0', 'None', true) + r('milui', '1', 'Milui') + r('milui', '2', 'Milui of milui')
+        + `<label class="check"><input type="checkbox" id="${p}-mfirst"> Milui before alphabet swap</label>`)}
       <div class="field"><span></span><div>
-        <button class="linkbtn" type="button" id="${p}-mlToggle" aria-expanded="false">Choose letter spellings</button>
-        <div class="milui" id="${p}-ml" hidden>${milui}</div>
+        <button class="linkbtn" type="button" id="${p}-mlToggle" aria-expanded="false" aria-controls="${p}-ml">Choose letter spellings</button>
+        <div class="milui" id="${p}-ml" lang="he" hidden>${milui}</div>
       </div></div>`;
   }
   function readOpts(p) {
@@ -227,8 +256,8 @@
   function buildBooks() {
     let html = '';
     for (const [en, he, a, z] of SECTIONS) {
-      html += `<fieldset><legend>${en} <span lang="he" style="font-family:var(--font-he);font-weight:400;color:var(--muted)">${he}</span>
-        <button class="linkbtn" type="button" data-sec="${a}-${z}">Toggle</button></legend><div class="booklist">`;
+      html += `<fieldset><legend>${en} <span class="he" lang="he">${he}</span>
+        <button class="linkbtn" type="button" data-sec="${a}-${z}" aria-label="Toggle all ${en} books">Toggle</button></legend><div class="booklist">`;
       for (let i = a; i < z; i++) {
         html += `<label><input type="checkbox" id="bk-${i}" checked> ${BOOKS[i][1]}<span class="he" lang="he">${BOOKS[i][0]}</span></label>`;
       }
@@ -244,7 +273,7 @@
   function buildKeyboard() {
     const order = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 23, 12, 13, 24, 14, 25, 15, 16, 17, 26, 18, 27, 19, 20, 21, 22];
     let html = '';
-    for (const i of order) html += `<button type="button" data-k="${i}" aria-label="${HEB[i]}"><b>${HEB[i]}</b><small>${GEM.abs[i]}</small></button>`;
+    for (const i of order) html += `<button type="button" lang="he" data-k="${i}" aria-label="${HEB[i]}"><b>${HEB[i]}</b><small>${GEM.abs[i]}</small></button>`;
     html += '<button type="button" class="wide" data-k="space">Space</button><button type="button" class="wide" data-k="back">⌫ Delete</button>';
     $('kbd').innerHTML = html;
   }
@@ -321,7 +350,8 @@
     if (!s.books.some(Boolean)) { showMessage('No books are selected. Choose at least one book under Advanced options.'); return; }
     const t0 = performance.now();
     const qSub = numeric ? [] : substitute(qIdx, s.inO);
-    const target = numeric ? parseInt(raw, 10) : gematria(qSub, s.inO);
+    const target = numeric ? parseTarget(raw) : gematria(qSub, s.inO);
+    if (numeric && target === null) { showMessage(TOO_BIG); return; }
     if (s.mode === 'g' && target <= 0) { showMessage('That value is 0, so nothing can match. Try a larger number.'); return; }
     const { hv, hs, he } = findMatches(s, target, keyOf(qSub));
     state = { ...s, raw, numeric, qIdx, qSub, target, hv, hs, he, page: 1, ms: performance.now() - t0 };
@@ -329,9 +359,42 @@
   }
 
   /* ---------- Rendering ---------- */
+  // One small live region announces the outcome of a search; the results themselves are not live,
+  // so a screen reader is not read a hundred verses after every click.
+  function announce(text) { const el = $('announce'); if (el) el.textContent = text; }
   function showMessage(msg, err) {
     state = null;
-    $('results').innerHTML = `<div class="status${err ? ' err' : ''}">${msg}</div>`;
+    const d = document.createElement('div');
+    d.className = 'status' + (err ? ' err' : '');
+    d.textContent = msg;
+    $('results').replaceChildren(d);
+    announce(msg);
+  }
+
+  // Remember which control inside #results has focus so a re-render can hand it back.
+  function focusSnapshot() {
+    const ae = document.activeElement, box = $('results');
+    if (!ae || !box.contains(ae)) return null;
+    if (ae.id) return { id: ae.id };
+    if (ae.matches('.pager button')) {
+      const pagers = [...box.querySelectorAll('.pager')];
+      return { pager: pagers.indexOf(ae.closest('.pager')), label: ae.textContent };
+    }
+    return null;
+  }
+  function focusRestore(snap) {
+    if (!snap) return;
+    let el = null;
+    if (snap.id) el = $(snap.id);
+    else {
+      const pager = $('results').querySelectorAll('.pager')[snap.pager];
+      if (pager) el = [...pager.querySelectorAll('button')].find((b) => b.textContent === snap.label);
+    }
+    if (el && el.disabled) el = el.closest('.pager, .display') || null; // e.g. 'Next' on the last page
+    if (el) {
+      if (!el.matches('button, input, select')) el.tabIndex = -1;
+      el.focus({ preventScroll: true });
+    }
   }
 
   function pagerHTML(total, page, last, per, withSize) {
@@ -369,16 +432,19 @@
     const desc = [describeOpts(st.inO) && 'input: ' + describeOpts(st.inO), describeOpts(st.tnO) && 'Tanach: ' + describeOpts(st.tnO)].filter(Boolean).join(' · ');
     const anySub = !isPlain(st.inO) || !isPlain(st.tnO);
     const nikudBlocked = showSub && !isPlain(st.tnO);
-    const useNikud = showNikud && !nikudBlocked;
-    if (useNikud) loadNikud();
+    const useNikud = showNikud && !nikudBlocked && loadNikud();
+    const nikudNote = nikudBlocked ? 'Turn off “Show substituted letters” to see nikud.'
+      : nikudError || (showNikud && !useNikud ? 'Loading nikud…' : '');
+    const metaText = `${fmt(total)} ${total === 1 ? 'match' : 'matches'} in ${scope}${total ? ` · showing ${fmt(from + 1)}–${fmt(to)}` : ''}`;
 
     let html = `<div class="rhead">
       <div class="summary">
         <div class="q" lang="he">${qLabel}</div>
-        <div class="meta">${fmt(total)} ${total === 1 ? 'match' : 'matches'} in ${scope}${total ? ` · showing ${fmt(from + 1)}–${fmt(to)}` : ''} · ${st.ms < 1000 ? Math.max(1, Math.round(st.ms)) + ' ms' : (st.ms / 1000).toFixed(1) + ' s'}${desc ? ' · ' + desc : ''}</div>
+        <div class="meta">${metaText} · ${st.ms < 1000 ? Math.max(1, Math.round(st.ms)) + ' ms' : (st.ms / 1000).toFixed(1) + ' s'}${desc ? ' · ' + desc : ''}</div>
       </div>
       <div class="display">
-        <label class="check"${nikudBlocked ? ' title="Turn off the other display options to see nikud"' : ''}><input type="checkbox" id="dispNik"${showNikud ? ' checked' : ''}${nikudBlocked ? ' disabled' : ''}> Show nikud</label>
+        <label class="check"><input type="checkbox" id="dispNik"${showNikud ? ' checked' : ''}${nikudBlocked ? ' disabled' : ''}${nikudNote ? ' aria-describedby="nikNote"' : ''}> Show nikud</label>
+        ${nikudNote ? `<span class="hint" id="nikNote">${nikudNote}</span>` : ''}
         <label class="check"><input type="checkbox" id="dispNums"${showNums ? ' checked' : ''}> Show each word's value</label>
         ${anySub ? `<label class="check"><input type="checkbox" id="dispSub"${showSub ? ' checked' : ''}> Show substituted letters</label>` : ''}
         <label class="check">Font <select id="verseFont"><option value=""${verseFont === '' ? ' selected' : ''}>Print</option><option value="font-a"${verseFont === 'font-a' ? ' selected' : ''}>Ashurit (Ashkenaz)</option><option value="font-s"${verseFont === 'font-s' ? ' selected' : ''}>Ashurit (Sefarad)</option></select></label>
@@ -428,8 +494,11 @@
       html += '</div>';
       html += pagerHTML(total, st.page, last, perPage, false);
     }
+    const snap = focusSnapshot();
     $('results').className = 'results ' + verseFont;
     $('results').innerHTML = html;
+    focusRestore(snap);
+    announce(metaText);
   }
 
   /* ---------- Live preview ---------- */
@@ -437,7 +506,11 @@
     const raw = $('q').value;
     const mode = $('mode-t').checked ? 't' : 'g';
     const live = $('live');
-    if (mode === 'g' && /^\s*\d+\s*$/.test(raw)) { live.innerHTML = `Searching for phrases worth <span class="val">${fmt(parseInt(raw, 10))}</span>`; return; }
+    if (mode === 'g' && /^\s*\d+\s*$/.test(raw)) {
+      const n = parseTarget(raw);
+      live.innerHTML = n === null ? TOO_BIG : `Searching for phrases worth <span class="val">${fmt(n)}</span>`;
+      return;
+    }
     const idx = parseQuery(raw);
     if (!idx.length) {
       live.textContent = /[a-z]/i.test(raw) ? 'Only Hebrew letters count. Switch your keyboard to Hebrew, or use the keyboard below.' : '';
@@ -467,20 +540,34 @@
     if (i) bits.push('input: ' + i);
     if (t) bits.push('Tanach: ' + t);
     $('optState').textContent = bits.join(' · ');
-    $('books').classList.toggle('disabled', scopeAll());
+    // While 'All of Tanach' is chosen the book list is out of the tab order and the accessibility tree too.
+    const off = scopeAll();
+    $('books').classList.toggle('disabled', off);
+    $('books').inert = off;
   }
 
   /* ---------- Wiring ---------- */
   function runSearch() {
     const btn = $('go');
-    btn.disabled = true; btn.textContent = 'Searching…';
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+    // Searches take milliseconds; only relabel the button if one is actually slow.
+    const slow = setTimeout(() => { btn.textContent = 'Searching…'; }, 150);
     setTimeout(() => {
       try { search(); } catch (err) { showMessage('Something went wrong while searching: ' + err.message, true); }
-      btn.disabled = false; btn.textContent = 'Search';
+      clearTimeout(slow);
+      btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = 'Search';
     }, 20);
   }
 
   function init() {
+    // The Google Fonts stylesheet is linked with media="print" so it does not block first paint.
+    const gf = $('gfonts');
+    if (gf) gf.media = 'all';
+    // The site (not the single-file artifact) registers a service worker for offline use.
+    if ('serviceWorker' in navigator && document.body.dataset.sw) {
+      navigator.serviceWorker.register(document.body.dataset.sw).catch(() => { /* offline support is optional */ });
+    }
+
     $('optInput').insertAdjacentHTML('beforeend', optionPanel('in'));
     $('optTanach').insertAdjacentHTML('beforeend', optionPanel('tn'));
     ['in', 'tn'].forEach((p) => {
@@ -541,7 +628,7 @@
       if (!b || !state) return;
       state.page = +b.dataset.pg;
       render();
-      $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      $('results').scrollIntoView({ block: 'start', behavior: reduceMotion() ? 'auto' : 'smooth' });
     });
     $('results').addEventListener('change', (e) => {
       if (e.target.id === 'per') { perPage = +e.target.value; if (state) state.page = 1; render(); }
@@ -582,5 +669,5 @@
   else init();
 
   // Exposed for testing.
-  window.__gematria = { loadNikud, parseQuery, substitute, gematria, keyOf, findMatches, readOpts, verses, words, wordText, bookRange, MILUI };
+  window.__gematria = { loadData, loadNikud, parseNikud, parseQuery, substitute, gematria, keyOf, findMatches, readOpts, verses, words, wordText, bookRange, MILUI, BOOKS };
 })();

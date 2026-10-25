@@ -4,11 +4,12 @@ Search all of Tanach by gematria or by exact text. Type a Hebrew word, phrase, o
 
 This is a rebuild of the Tanach & Gematria Search Tool by David Komer at thetrugmans.com. It uses the same search algorithm and gives the same results, with these changes:
 
-- **It doesn't get stuck.** The whole Tanach is embedded in one HTML file (no loading 39 files one after another), and word values are computed once per search instead of again for every word pair. Searches take milliseconds, including milui of milui across all of Tanach.
+- **It doesn't get stuck.** The whole Tanach text is embedded in one HTML file (no loading 39 files one after another; the nikud text is fetched only when you turn it on), and word values are computed once per search instead of again for every word pair. Searches take milliseconds, including milui of milui across all of Tanach.
 - **Corrected text.** The original site's data was checked word by word against two independent sources: *Miqra according to the Masorah* (Aleppo Codex / Breuer) and the Leningrad Codex (UXLC). 11 typos where both manuscripts disagree with the old data were fixed (for example Daniel 3:25, 4:7 and 7:15 בגו → בגוא, Iyov 6:26 נואש → נאש, and Kohelet 6:10, where the old data had the qere instead of the written text).
-- **Corrected verse numbers.** The old data merged Tehillim 108:1–2 (both labeled 108:3), was off by one or two verses in Shemot 20, Devarim 5 and Yehoshua 21, and used Christian numbering in Shmuel I 23–24 and Yirmiyahu 30–31. All verse numbers now follow standard Hebrew Bibles, so the Sefaria links match.
+- **Corrected verse numbers.** The old data merged Tehillim 108:1–2 (both labeled 108:3), was off by one or two verses in Shemot 20, Devarim 5 and Yehoshua 21, and used Christian numbering in Shmuel I 23–24 and Yirmiyahu 30–31. All verse numbers now follow standard Hebrew Bibles, so the Sefaria links match. Yehoshua 21:36–37 (printed in brackets in most editions) are absent from the Aleppo and Leningrad codices and from Miqra according to the Masorah, so they are not included; the numbering skips from 21:35 to 21:38.
 - **Text tradition option.** Choose the Ashkenazi/Sephardi Sefer Torah (the default, with the standard 304,805 Torah letters) or the Aleppo Codex / Breuer text that the original site used. They differ in 10 words.
-- **Nikud.** Turn on "Show nikud" above the results to read each verse with vowels. Where the written and read forms differ (ketiv/qere), the read form appears in brackets. The choice is remembered.
+- **Nikud.** Turn on "Show nikud" above the results to read each verse with vowels. Where the written and read forms differ (ketiv/qere), the read form appears in brackets; a word that is read but not written is shown in brackets after the word it follows. The choice is remembered.
+- **Installable.** The page can be added to a phone's home screen and, once opened, works offline.
 - **Word values and Ashurit.** "Show each word's value" puts every word's gematria beneath it (works together with nikud). The Font menu switches the verses to ketav Ashurit in the Ashkenazi or Sephardi style.
 - **Extras:** search by number, live gematria preview as you type, per-word values, and a Sefaria link for every result.
 
@@ -26,12 +27,14 @@ Input and Tanach substitutions are set separately, as on the original site.
 
 ## Files
 
-- `index.html` is the complete app (GitHub Pages serves this).
-- `src/` has the page markup, styles and script.
+- `index.html` is the app (GitHub Pages serves this, together with `data/nikud.txt`, the manifest, the icons and the service worker).
+- `src/` has the page markup, styles, script and the service worker template.
+- `manifest.webmanifest`, `icons/` and `sw.js` make the page installable and give it a favicon, home-screen icons and offline support.
+- `tests/` has the data invariants (`python3 -I tests/check_data.py`) and search-engine tests (`node --test "tests/*.test.mjs"`); the GitHub Actions workflow runs both and checks that the committed build is current.
 - `data/nikud.txt` has the same verses with nikud, aligned word for word (a token ending in a maqaf joins the next word; `ketiv|qere` marks read forms).
 - `data/tanach.txt` has the text: one verse per line as `chapter:verse words…`, books introduced by `@index`, and Ashkenazi/Sephardi variants as `!chapter:verse words…`.
 - `fonts/` has the Culmus STaM fonts (Stam Ashkenaz CLM, Stam Sefarad CLM by Yoram Gnat, GPL 2 with font-embedding exception; see `fonts/LICENSE-culmus.txt`). The build embeds them in the page.
-- `build.py` assembles `index.html` (and `artifact.html`) from `src/` and `data/`.
+- `build.py` assembles `index.html`, `sw.js` and `artifact.html` (a single-file version with the nikud embedded) from `src/` and `data/`. Run it after any change to `src/` or `data/` and commit the output.
 
 ## Text sources
 
